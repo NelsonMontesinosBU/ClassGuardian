@@ -92,3 +92,46 @@ class TwoFactorAuthenticationController {
 
 module.exports = TwoFactorAuthenticationController;
 
+const { Controller, Post, Body, Req, Res } = require('@nestjs/common');
+const { TwoFactorAuthenticationService } = require('./two-factor-authentication.service');
+const speakeasy = require('speakeasy');
+
+@Controller('2fa')
+class TwoFactorAuthenticationController {
+  constructor(twoFactorAuthenticationService) {
+    this.twoFactorAuthenticationService = twoFactorAuthenticationService;
+  }
+
+  @Post('enable')
+  async enableTwoFactorAuth(@Req() req, @Body() body, @Res() res) {
+
+    const user = req.user;
+
+    if (!user) {
+      return res.status(401).json({ message: 'User not authenticated' });
+    }
+
+
+    if (user.isTwoFactorAuthenticationEnabled) {
+      return res.status(400).json({ message: '2FA already enabled!' });
+    }
+
+    const { token } = body;
+
+    const isValidToken = this.twoFactorAuthenticationService.validateTwoFactorAuthenticationToken(
+      token,
+      user.twoFactorAuthenticationSecret
+    );
+
+    if (!isValidToken) {
+      return res.status(401).json({ message: 'Invalid 2FA token' });
+    }
+
+
+    return res.status(200).json({ message: '2FA enabled successfully' });
+  }
+}
+
+module.exports = TwoFactorAuthenticationController;
+
+
